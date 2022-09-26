@@ -12,3 +12,4 @@
 - name: Executing node
   shell: |
     pm2 start ~/dist/main.js -f  
+
