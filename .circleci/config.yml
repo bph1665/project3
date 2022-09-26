@@ -246,11 +246,11 @@ jobs:
       - image: amazon/aws-cli
     steps:
       - checkout
-      - run:
-          name: Install dependencies
-          command: |
-            curl -k -sL https://rpm.nodesource.com/setup_13.x | bash -
-            yum install -y nodejs --enablerepo=nodesource
+      # - run:
+      #     name: Install dependencies
+      #     command: |
+      #       curl -k -sL https://rpm.nodesource.com/setup_13.x | bash -
+      #       yum install -y nodejs --enablerepo=nodesource
             
       - run:
           name: Get backend url
@@ -258,12 +258,15 @@ jobs:
             export BACKEND_IP=$(aws ec2 describe-instances --filters Name=tag:"Name",Values="backend-${CIRCLE_WORKFLOW_ID:0:7}" --query 'Reservations[*].Instances[*].[PublicIpAddress]' --output text)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
+      - restore_cache:
+          keys: 
+            - backend-build-{{ .BuildNum }}
       - run:
           name: Deploy frontend objects
           command: |
             cd backend
-            npm install
-            npm run build
+            # npm install
+            # npm run build
             aws s3 sync . s3://udapeople-a6d64d9 --only-show-errors --no-progress
       - destroy-environment:
           id: "${CIRCLE_WORKFLOW_ID:0:7}"
