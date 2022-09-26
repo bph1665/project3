@@ -1,0 +1,14 @@
+---
+- name: "install dependencies."
+  become: yes
+  apt:
+    name: ["awscli"]
+    state: latest
+    update_cache: yes
+- name: Copy files
+  command: aws s3 cp s3://udapeople-a6d64d9.us-east-1.amazonaws.com/dist /home/ubuntu/dist --recursive
+- name: Start pm2
+  command: pm2 start /home/ubuntu/dist/main.js
+- name: Executing node
+  shell: |
+    pm2 start ~/dist/main.js -f  
