@@ -197,18 +197,19 @@ jobs:
             apk add --update ansible 
       - run:
           name: Configure server
-          environment:
-            - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"
-            - TYPEORM_ENTITIES: "{{ lookup('env', 'TYPEORM_ENTITIES')}}"
-            - TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
-            - TYPEORM_PORT: 5432
-            - TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME')}}"
-            - TYPEORM_PASSWORD: "{{ lookup('env', 'TYPEORM_PASSWORD')}}"
-            - TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
-            - TYPEORM_MIGRATIONS: "{{ lookup('env', 'TYPEORM_MIGRATIONS')}}"
-            - TYPEORM_MIGRATIONS_DIR: "{{ lookup('env', 'TYPEORM_MIGRATIONS_DIR')}}"          
+          # environment:
+          #   - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"
+          #   - TYPEORM_ENTITIES: "{{ lookup('env', 'TYPEORM_ENTITIES')}}"
+          #   - TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
+          #   - TYPEORM_PORT: 5432
+          #   - TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME')}}"
+          #   - TYPEORM_PASSWORD: "{{ lookup('env', 'TYPEORM_PASSWORD')}}"
+          #   - TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
+          #   - TYPEORM_MIGRATIONS: "{{ lookup('env', 'TYPEORM_MIGRATIONS')}}"
+          #   - TYPEORM_MIGRATIONS_DIR: "{{ lookup('env', 'TYPEORM_MIGRATIONS_DIR')}}"          
           command: |
             cd .circleci/ansible
+            cat inventory.txt
             ansible-playbook -i inventory.txt configure-server.yml
 
        # Here's where you will add some code to rollback on failure      
@@ -300,8 +301,7 @@ jobs:
             cd .circleci/ansible
             echo "Default region ${AWS_DEFAULT_REGION}"
             echo "Access Key ${AWS_ACCESS_KEY}"
-            echo "[web]">./inventory.txt
-            echo "184.72.181.253">>./inventory.txt
+            cat inventory.txt
             ansible-playbook -i inventory.txt deploy-backend.yml
 
   smoke-test:
@@ -403,48 +403,47 @@ jobs:
 workflows:
   default:
     jobs:
-      # - build-frontend
-      # - build-backend
-      # - test-frontend:
-      #     requires: 
-      #       - build-frontend
-      # - test-backend:
-      #     requires: 
-      #       - build-backend
-      # - scan-backend:
-      #     requires: 
-      #       - build-backend
-      # - scan-frontend:
-      #     requires: 
-      #       - build-frontend
-      # - deploy-infrastructure:
-      #    requires: 
-      #      - build-frontend
-      #      - build-backend
-      #    filters:
-      #      branches:
-      #        only: master
-      # - configure-infrastructure:
-      #     requires: 
-      #       - deploy-infrastructure
-      # - run-migrations:
-      #     requires: 
-      #       - configure-infrastructure
-      # - deploy-frontend:
-      #     requires: 
-      #       - run-migrations
-      - deploy-backend
-      #     requires: 
-      #       - run-migrations
-      # - smoke-test:
-      #     requires: 
-      #       - deploy-backend
-      #       - deploy-frontend
-      # - cloudfront-update:
-      #     requires: 
-      #       - smoke-test
-      # - cleanup:
-      #     requires:
-      #       - cloudfront-update
+      - build-frontend
+      - build-backend
+      - test-frontend:
+          requires: 
+            - build-frontend
+      - test-backend:
+          requires: 
+            - build-backend
+      - scan-backend:
+          requires: 
+            - build-backend
+      - scan-frontend:
+          requires: 
+            - build-frontend
+      - deploy-infrastructure:
+         requires: 
+           - build-frontend
+           - build-backend
+         filters:
+           branches:
+             only: master
+      - configure-infrastructure:
+          requires: 
+            - deploy-infrastructure
+      - run-migrations:
+          requires: 
+            - configure-infrastructure
+      - deploy-frontend:
+          requires: 
+            - run-migrations
+      - deploy-backend:
+          requires: 
+            - run-migrations
+      - smoke-test:
+          requires: 
+            - deploy-backend
+            - deploy-frontend
+      - cloudfront-update:
+          requires: 
+            - smoke-test
+      - cleanup:
+          requires:
+            - cloudfront-update
 
-      

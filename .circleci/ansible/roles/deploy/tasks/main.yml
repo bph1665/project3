@@ -11,5 +11,5 @@
   command: pm2 start /home/ubuntu/dist/main.js
 - name: Executing node
   shell: |
-    pm2 start -f ~/dist/main.js
+    pm2 start ~/dist/main.js -f
 
