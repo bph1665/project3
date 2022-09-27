@@ -18,7 +18,5 @@
   - TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME')}}"
   - TYPEORM_PASSWORD: "{{ lookup('env', 'TYPEORM_PASSWORD')}}"
   - TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
-  - AWS_ACCESS_KEY_ID: "{{ lookup('env', 'AWS_ACCESS_KEY_ID')}}"    
-  - AWS_SECRET_ACCESS_KEY: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY')}}"    
   roles:
     - deploy

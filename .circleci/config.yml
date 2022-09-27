@@ -258,16 +258,15 @@ jobs:
             export BACKEND_IP=$(aws ec2 describe-instances --filters Name=tag:"Name",Values="backend-${CIRCLE_WORKFLOW_ID:0:7}" --query 'Reservations[*].Instances[*].[PublicIpAddress]' --output text)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
-      - restore_cache:
-          keys: 
-            - backend-build-{{ .BuildNum }}
       - run:
           name: Deploy frontend objects
           command: |
-            cd backend
-            # npm install
-            # npm run build
-            aws s3 sync . s3://udapeople-a6d64d9 --only-show-errors --no-progress
+            cd frontend
+            npm install
+            npm run build
+            #aws s3 sync . s3://udapeople-a6d64d9 --only-show-errors --no-progress
+            aws s3 sync . "s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7}" --only-show-errors --no-progress
+            udapeople-fxt2hmmtn6z
       - destroy-environment:
           id: "${CIRCLE_WORKFLOW_ID:0:7}"
 
@@ -284,29 +283,45 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            apk add --update ansible 
+            apk add --update ansible
+            apk add --update npm
+      # - restore_cache:
+      #     keys: 
+      #       - backend-build-{{ .BuildNum }}
+      # - run:
+      #     name: Deploy backend objects
+      #     command: |
+      #       cd backend
+      #       # npm install
+      #       # npm run build
+      #       # aws s3 sync . s3://udapeople-a6d64d9 --only-show-errors --no-progress
+      #       aws s3 sync . s3://udapeople-fxt2hmmtn6z --only-show-errors --no-progress
+            
       - run:
           name: Deploy backend
-          # environment:
-          #   - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"
-          #   - TYPEORM_ENTITIES: "{{ lookup('env', 'TYPEORM_ENTITIES')}}"
-          #   - TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
-          #   - TYPEORM_PORT: 5432
-          #   - TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME')}}"
-          #   - TYPEORM_PASSWORD: "{{ lookup('env', 'TYPEORM_PASSWORD')}}"
-          #   - TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
-          #   - TYPEORM_MIGRATIONS: "{{ lookup('env', 'TYPEORM_MIGRATIONS')}}"
-          #   - TYPEORM_MIGRATIONS_DIR: "{{ lookup('env', 'TYPEORM_MIGRATIONS_DIR')}}"    
-          #   - AWS_ACCESS_KEY_ID: "{{ lookup('env', 'AWS_ACCESS_KEY_ID')}}"    
-          #   - AWS_SECRET_ACCESS_KEY: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY')}}"    
-          #   - AWS_DEFAULT_REGION: "{{ lookup('env', 'AWS_DEFAULT_REGION')}}"    
+          environment:
+            # - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"
+            # - TYPEORM_ENTITIES: "{{ lookup('env', 'TYPEORM_ENTITIES')}}"
+            # - TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
+            # - TYPEORM_PORT: 5432
+            # - TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME')}}"
+            # - TYPEORM_PASSWORD: "{{ lookup('env', 'TYPEORM_PASSWORD')}}"
+            # - TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
+            # - TYPEORM_MIGRATIONS: "{{ lookup('env', 'TYPEORM_MIGRATIONS')}}"
+            # - TYPEORM_MIGRATIONS_DIR: "{{ lookup('env', 'TYPEORM_MIGRATIONS_DIR')}}"    
           command: |
+            cd backend
+            npm i
+            npm run build
+            cd ..
+            # Zip the directory
+            tar -C backend -czvf artifact.tar.gz .
+            mkdir .circleci/ansible/roles/deploy/files
+            cp artifact.tar.gz .circleci/ansible/roles/deploy/files
             cd .circleci/ansible
-            echo "Default region ${AWS_DEFAULT_REGION}"
-            echo "Access Key ${AWS_ACCESS_KEY}"
+            echo "Contents  of the inventory.txt file is -------"
             cat inventory.txt
             ansible-playbook -i inventory.txt deploy-backend.yml
-
   smoke-test:
     docker:
       - image: circleci/node:13.8.0
