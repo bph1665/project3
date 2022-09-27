@@ -48,8 +48,6 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      # - restore_cache:
-      #     keys: [frontend-build]
       - run:
           name: Build front-end
           command: |
@@ -66,8 +64,6 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      # - restore_cache:
-      #     keys: [backend-build]
       - run:
           name: Back-end build
           command: |
@@ -178,7 +174,6 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-      # Here's where you will add some code to rollback on failure
       - destroy-environment:
           id: "${CIRCLE_WORKFLOW_ID:0:7}"
 
@@ -197,22 +192,11 @@ jobs:
             apk add --update ansible 
       - run:
           name: Configure server
-          # environment:
-          #   - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"
-          #   - TYPEORM_ENTITIES: "{{ lookup('env', 'TYPEORM_ENTITIES')}}"
-          #   - TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
-          #   - TYPEORM_PORT: 5432
-          #   - TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME')}}"
-          #   - TYPEORM_PASSWORD: "{{ lookup('env', 'TYPEORM_PASSWORD')}}"
-          #   - TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
-          #   - TYPEORM_MIGRATIONS: "{{ lookup('env', 'TYPEORM_MIGRATIONS')}}"
-          #   - TYPEORM_MIGRATIONS_DIR: "{{ lookup('env', 'TYPEORM_MIGRATIONS_DIR')}}"          
           command: |
             cd .circleci/ansible
             cat inventory.txt
             ansible-playbook -i inventory.txt configure-server.yml
 
-       # Here's where you will add some code to rollback on failure      
       - destroy-environment:
           id: "${CIRCLE_WORKFLOW_ID:0:7}"
   run-migrations:
@@ -237,7 +221,6 @@ jobs:
             else
               curl -k "https://kvdb.io/${key}/migration_${CIRCLE_WORKFLOW_ID:0:7}" -d "1"
             fi
-     # Here's where you will add some code to rollback on failure      
       - revert-migrations:
           id: $CIRCLE_WORKFLOW_ID
 
@@ -255,11 +238,6 @@ jobs:
             sudo apt install python3
             sudo apt install awscli
             sudo apt install ansible
-      # - run:
-      #     name: Install dependencies
-      #     command: |
-      #       curl -k -sL https://rpm.nodesource.com/setup_13.x | bash -
-      #       yum install -y nodejs --enablerepo=nodesource
             
       - run:
           name: Get backend url
@@ -295,30 +273,8 @@ jobs:
           command: |
             apk add --update ansible
             apk add --update npm
-      # - restore_cache:
-      #     keys: 
-      #       - backend-build-{{ .BuildNum }}
-      # - run:
-      #     name: Deploy backend objects
-      #     command: |
-      #       cd backend
-      #       # npm install
-      #       # npm run build
-      #       # aws s3 sync . s3://udapeople-a6d64d9 --only-show-errors --no-progress
-      #       aws s3 sync . s3://udapeople-fxt2hmmtn6z --only-show-errors --no-progress
-            
       - run:
           name: Deploy backend
-          environment:
-            # - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"
-            # - TYPEORM_ENTITIES: "{{ lookup('env', 'TYPEORM_ENTITIES')}}"
-            # - TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
-            # - TYPEORM_PORT: 5432
-            # - TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME')}}"
-            # - TYPEORM_PASSWORD: "{{ lookup('env', 'TYPEORM_PASSWORD')}}"
-            # - TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
-            # - TYPEORM_MIGRATIONS: "{{ lookup('env', 'TYPEORM_MIGRATIONS')}}"
-            # - TYPEORM_MIGRATIONS_DIR: "{{ lookup('env', 'TYPEORM_MIGRATIONS_DIR')}}"    
           command: |
             cd backend
             npm i
@@ -378,9 +334,6 @@ jobs:
             fi
       - revert-migrations:
           id: $CIRCLE_WORKFLOW_ID
-
-      # Here's where you will add some code to rollback on failure  
-
   cloudfront-update:
     docker:
       - image: amazon/aws-cli
@@ -398,36 +351,31 @@ jobs:
             --stack-name InitialStack \
             --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
             --tags project=udapeople
-      # Here's where you will add some code to rollback on failure  
-
   cleanup:
     docker:
       - image: amazon/aws-cli
     steps:
       - checkout
       - run:
-          name: Get old stack workflow id
-          command: |
-            export OldWorkflowID=$(aws cloudformation \
-            list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
-            --no-paginate --output text)
-            echo OldWorkflowID: "${OldWorkflowID}"
-            echo CIRCLE_WORKFLOW_ID "${CIRCLE_WORKFLOW_ID:0:7}"
-            # Fetch the stack names          
-            export STACKS=($(aws cloudformation list-stacks --query "StackSummaries[*].StackName" \
-            --stack-status-filter CREATE_COMPLETE --no-paginate --output text)) 
-            echo Stack names: "${STACKS[@]}"
-      - run:
           name: Remove old stacks and files
           command: |
-            if [[ "${CIRCLE_WORKFLOW_ID:0:7}" =~ "${OldWorkflowID}" ]]
+            # Fetch the stack names          
+            export STACKS=($(aws cloudformation list-stacks --query "StackSummaries[*].StackName" 
+            --stack-status-filter CREATE_COMPLETE --no-paginate --output text)) 
+            for index in "${!STACKS[@]}" ; do [[ ${STACKS[$index]} =~ "${CIRCLE_WORKFLOW_ID:0:7}" ]] && unset -v 'STACKS[$index]' ; done
+            STACKS=("${STACKS[@]}")
+            export OldWorkflowID=$(echo "${STACKS[0]}" | cut -d "-" -f 3)
+            echo OldWorkflowID: "${OldWorkflowID}"
+            echo CIRCLE_WORKFLOW_ID "${CIRCLE_WORKFLOW_ID:0:7}"
+            echo Stack names: "${STACKS[@]}"
+            if [[ -z "${OldWorkflowID}" ]]
             then
+              echo "Couldn't find previous workflow id"
+            else
               aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
               aws cloudformation delete-stack --stack-name "udapeople-backend-${OldWorkflowID}"
               aws cloudformation delete-stack --stack-name "udapeople-frontend-${OldWorkflowID}"
             fi
-            
-
 workflows:
   default:
     jobs:
